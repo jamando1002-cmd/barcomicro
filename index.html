@@ -251,23 +251,118 @@
     </div>
 
     <script>
-        // Lógica de comunicación idéntica a la original para mantener conectividad
+        // Variables de estado del Joystick y botones
         let joyX = 128;
         let joyY = 128;
         let bitmaskBotones = 0x00;
 
+        // Variables globales de Web Bluetooth
+        let bleDevice = null;
+        let caracteristicaComandos = null;
+        let caracteristicaEstado = null;
+
+        // UUIDs idénticos a los del firmware del ESP32 (Web Bluetooth exige minúsculas)
+        const SERVICE_UUID       = "4fafc201-1fb5-459e-8fcc-c5c9c331914b";
+        const CHAR_COMANDOS_UUID = "beb5483e-36e1-4688-b7f5-ea07361b26a8";
+        const CHAR_ESTADO_UUID   = "0072f14a-1912-43ea-bd79-9fa5a10c00df";
+
+        // Referencias de UI
         const boundary = document.getElementById('joy-boundary');
         const handle = document.getElementById('joy-handle');
-        const bRect = boundary.getBoundingClientRect();
-        const maxRadius = boundary.clientWidth / 2;
+        const btnConnect = document.getElementById('btn-connect');
+        const bRect = boundary.getBoundingClientRect();> Javier:
+const maxRadius = boundary.clientWidth / 2;
 
+        // --- SISTEMA DE CONEXIÓN WEB BLUETOOTH ---
+        btnConnect.addEventListener('click', async () => {
+            if (bleDevice && bleDevice.gatt.connected) {
+                // Si ya estamos conectados, al hacer clic desconectamos el enlace
+                console.log("Desconectando dispositivo...");
+                await bleDevice.gatt.disconnect();
+                return;
+            }
+
+            try {
+                console.log("Buscando dispositivo CyberNav-ESP32...");
+                bleDevice = await navigator.bluetooth.requestDevice({
+                    filters: [{ name: 'CyberNav-ESP32' }],
+                    optionalServices: [SERVICE_UUID]
+                });
+
+                bleDevice.addEventListener('gattserverdisconnected', onDisconnected);
+
+                btnConnect.innerText = "CONNECTING...";
+                console.log("Conectando al servidor GATT...");
+                const server = await bleDevice.gatt.connect();
+
+                console.log("Obteniendo el servicio principal...");
+                const service = await server.getPrimaryService(SERVICE_UUID);
+
+                console.log("Enlazando características de comunicación...");
+                caracteristicaComandos = await service.getCharacteristic(CHAR_COMANDOS_UUID);
+                caracteristicaEstado = await service.getCharacteristic(CHAR_ESTADO_UUID);
+
+                // Suscripción al canal de telemetría (Notify)
+                await caracteristicaEstado.startNotifications();
+                caracteristicaEstado.addEventListener('characteristicvaluechanged', (e) => {
+                    actualizarTelemetriaDesdeESP32(e.target.value);
+                });
+
+                // Cambio estético a Online
+                btnConnect.innerText = "DISCONNECT LINK";
+                btnConnect.classList.add('online');
+                document.getElementById('val-modo').innerText = "ONLINE";
+                console.log("Enlace establecido con éxito.");
+
+            } catch (error) {
+                console.error("Fallo en la comunicación BLE:", error);
+                alert("Error de sincronización: " + error.message);
+                btnConnect.innerText = "INITIALIZE LINK";
+                btnConnect.classList.remove('online');
+            }
+        });
+
+        function onDisconnected() {
+            console.log("Enlace Bluetooth perdido.");
+            btnConnect.innerText = "INITIALIZE LINK";
+            btnConnect.classList.remove('online');
+            
+            // Reiniciar UI a valores por defecto
+            document.getElementById('val-modo').innerText = "OFFLINE";
+            document.getElementById('val-vel').innerText = "--";
+            document.getElementById('val-dir').innerText = "--";
+            document.getElementById('val-alarma').innerText = "--";
+            document.getElementById('val-bat').innerText = "--";
+            
+            caracteristicaComandos = null;
+            caracteristicaEstado = null;
+        }
+
+        // --- CANAL DE ENVÍO DE DATOS HACIA EL ESP32 ---
+        async function enviarComandoBLE() {
+            const paquete = new Uint8Array([0xAA, joyY, joyX, bitmaskBotones]);
+            
+            if (caracteristicaComandos && bleDevice && bleDevice.gatt.connected) {
+                try {
+                    // Envío directo sin esperar confirmación para máxima fluidez del joystick
+                    await caracteristicaComandos.writeValueWithoutResponse(paquete);
+                } catch (error) {
+                    console.error("Error en la transmisión de datos:", error);
+                }
+            } else {
+                console.log("TX (Modo Simulado) -> ESP32:", Array.from(paquete).map(b => '0x' + b.toString(16).toUpperCase()));
+            }
+        }
+
+        // --- SISTEMA DEL JOYSTICK ---
         function handleTouch(e) {
             e.preventDefault();
             const touch = e.touches[0];
             const centerX = bRect.left + maxRadius;
             const centerY = bRect.top + maxRadius;
-            
-            let deltaX = touch.clientX - centerX;
+
+> Javier:
+let deltaX = touch.clientX - centerX;
             let deltaY = touch.clientY - centerY;
             
             let distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
@@ -277,8 +372,8 @@
                 distance = maxRadius;
             }
 
-            handle.style.left = `calc(50% + ${deltaX}px)`;
-            handle.style.top = `calc(50% + ${deltaY}px)`;
+            handle.style.left = calc(50% + ${deltaX}px);
+            handle.style.top = calc(50% + ${deltaY}px);
 
             joyX = Math.round(((deltaX / maxRadius) * 127) + 128);
             joyY = Math.round(((-deltaY / maxRadius) * 127) + 128);
@@ -297,6 +392,7 @@
         boundary.addEventListener('touchmove', handleTouch, {passive: false});
         boundary.addEventListener('touchend', resetJoystick);
 
+        // --- CONTROLADORES DE LOS BOTONES INFERIORES ---
         const btnManual = document.getElementById('btn-manual');
         const btnRecord = document.getElementById('btn-record');
         const btnSave = document.getElementById('btn-save');
@@ -329,12 +425,7 @@
             setTimeout(() => { bitmaskBotones &= ~0x04; }, 80);
         });
 
-        function enviarComandoBLE() {
-            const paquete = new Uint8Array([0xAA, joyY, joyX, bitmaskBotones]);
-            console.log("TX -> ESP32:", Array.from(paquete).map(b => '0x' + b.toString(16).toUpperCase()));
-            // Aquí enlazas tu API Web Bluetooth apuntando a tu característica
-        }
-
+        // --- DECODIFICADOR DE TELEMETRÍA DESDE EL ESP32 ---
         function actualizarTelemetriaDesdeESP32(dataView) {
             if(dataView.getUint8(0) !== 0xBB) return;
 
