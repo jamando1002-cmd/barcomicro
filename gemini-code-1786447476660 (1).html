@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>CyberNav Core Interface</title>
+    <style>
+        :root {
+            --bg-dark: #090d16;
+            --panel-card: #131a26;
+            --neon-orange: #ff6b00;
+            --neon-purple: #a855f7;
+            --neon-yellow: #eab308;
+            --text-cyan: #22d3ee;
+            --text-light: #e2e8f0;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        body {
+            font-family: 'Courier New', Courier, monospace;
+            background-color: var(--bg-dark);
+            color: var(--text-light);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: space-between;
+            min-height: 100vh;
+            padding: 20px;
+            overflow: hidden;
+        }
+
+        /* Cabecera Principal Reestructurada */
+        header {
+            width: 100%;
+            max-width: 480px;
+            text-align: center;
+            border-bottom: 2px solid var(--neon-purple);
+            padding-bottom: 8px;
+            margin-bottom: 15px;
+        }
+
+        header h1 {
+            font-size: 1.2rem;
+            letter-spacing: 3px;
+            color: var(--text-cyan);
+            text-shadow: 0 0 8px rgba(34, 211, 238, 0.5);
+        }
+
+        /* Malla de Telemetría Rediseñada */
+        .telemetry-grid {
+            width: 100%;
+            max-width: 480px;
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+        }
+
+        .tel-card {
+            background-color: var(--panel-card);
+            border: 1px solid #1e293b;
+            border-radius: 6px;
+            padding: 12px;
+            position: relative;
+        }
+
+        .tel-card.full {
+            grid-column: span 2;
+            border-left: 3px solid var(--neon-orange);
+        }
+
+        .tel-title {
+            font-size: 0.65rem;
+            color: #64748b;
+            text-transform: uppercase;
+            display: block;
+            margin-bottom: 5px;
+        }
+
+        .tel-data {
+            font-size: 1.4rem;
+            font-weight: bold;
+            color: var(--text-light);
+        }
+
+        .sys-alert {
+            color: #ef4444;
+            animation: pulse-alert 0.6s infinite alternate;
+        }
+
+        @keyframes pulse-alert {
+            from { opacity: 0.3; text-shadow: 0 0 0px #ef4444; }
+            to { opacity: 1; text-shadow: 0 0 8px #ef4444; }
+        }
+
+        /* Zona de Control Central - Estilo Radar */
+        .radar-zone {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-grow: 1;
+        }
+
+        .radar-disc {
+            width: 210px;
+            height: 210px;
+            background: repeating-radial-gradient(circle, #131a26, #131a26 20px, #1e293b 21px, #1e293b 22px);
+            border: 2px solid var(--neon-purple);
+            border-radius: 50%;
+            position: relative;
+            touch-action: none;
+            box-shadow: 0 0 15px rgba(168, 85, 247, 0.2);
+        }
+
+        .radar-knob {
+            width: 55px;
+            height: 55px;
+            background: var(--neon-orange);
+            border: 3px solid var(--bg-dark);
+            border-radius: 50%;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            box-shadow: 0 0 10px var(--neon-orange);
+            cursor: pointer;
+        }
+
+        /* Módulo de Comando Inferior */
+        .action-dock {
+            width: 100%;
+            max-width: 480px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .link-trigger {
+            width: 100%;
+            background: linear-gradient(90deg, transparent, rgba(168,85,247,0.1), transparent);
+            border: 1px solid var(--neon-purple);
+            color: var(--neon-purple);
+            padding: 10px;
+            font-family: inherit;
+            font-weight: bold;
+            letter-spacing: 2px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .link-trigger.online {
+            background: var(--neon-purple);
+            color: var(--bg-dark);
+            box-shadow: 0 0 12px var(--neon-purple);
+        }
+
+        .btn-row {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+        }
+
+        .btn-cmd {
+            background-color: var(--panel-card);
+            border: 1px solid #334155;
+            color: var(--text-cyan);
+            padding: 14px 5px;
+            border-radius: 4px;
+            font-family: inherit;
+            font-size: 0.75rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .btn-cmd:active {
+            background-color: #1e293b;
+        }
+
+        #btn-manual.active-state {
+            border-color: var(--neon-orange);
+            color: var(--neon-orange);
+            box-shadow: 0 0 8px rgba(255,107,0,0.4);
+        }
+
+        #btn-record.active-state {
+            border-color: #ef4444;
+            color: #ef4444;
+            animation: pulse-alert 0.8s infinite alternate;
+        }
+
+        #btn-save:active {
+            background-color: var(--neon-yellow);
+            color: var(--bg-dark);
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>CYBERNAV // CORE_OS</h1>
+    </header>
+
+    <!-- TELEMETRÍA CENTRALIZADA -->
+    <div class="telemetry-grid">
+        <div class="tel-card full">
+            <span class="tel-title">System Status</span>
+            <span class="tel-data" id="val-modo">OFFLINE</span>
+        </div>
+        <div class="tel-card">
+            <span class="tel-title">Velocity (AN1)</span>
+            <span class="tel-data" id="val-vel">--</span>
+        </div>
+        <div class="tel-card">
+            <span class="tel-title">Heading (AN2)</span>
+            <span class="tel-data" id="val-dir">--</span>
+        </div>
+        <div class="tel-card">
+            <span class="tel-title">Idle Lock</span>
+            <span class="tel-data" id="val-alarma">--</span>
+        </div>
+        <div class="tel-card">
+            <span class="tel-title">Power (AN0)</span>
+            <span class="tel-data" id="val-bat">--</span>
+        </div>
+    </div>
+
+    <!-- RADAR JOYSTICK -->
+    <div class="radar-zone">
+        <div class="radar-disc" id="joy-boundary">
+            <div class="radar-knob" id="joy-handle"></div>
+        </div>
+    </div>
+
+    <!-- CONSOLA DE ACCIONES -->
+    <div class="action-dock">
+        <button class="link-trigger" id="btn-connect">INITIALIZE LINK</button>
+        
+        <div class="btn-row">
+            <button class="btn-cmd" id="btn-manual">M_MANUAL</button>
+            <button class="btn-cmd" id="btn-record">REC_AP</button>
+            <button class="btn-cmd" id="btn-save">SYS_SAVE</button>
+        </div>
+    </div>
+
+    <script>
+        // Lógica de comunicación idéntica a la original para mantener conectividad
+        let joyX = 128;
+        let joyY = 128;
+        let bitmaskBotones = 0x00;
+
+        const boundary = document.getElementById('joy-boundary');
+        const handle = document.getElementById('joy-handle');
+        const bRect = boundary.getBoundingClientRect();
+        const maxRadius = boundary.clientWidth / 2;
+
+        function handleTouch(e) {
+            e.preventDefault();
+            const touch = e.touches[0];
+            const centerX = bRect.left + maxRadius;
+            const centerY = bRect.top + maxRadius;
+            
+            let deltaX = touch.clientX - centerX;
+            let deltaY = touch.clientY - centerY;
+            
+            let distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+            if (distance > maxRadius) {
+                deltaX = (deltaX / distance) * maxRadius;
+                deltaY = (deltaY / distance) * maxRadius;
+                distance = maxRadius;
+            }
+
+            handle.style.left = `calc(50% + ${deltaX}px)`;
+            handle.style.top = `calc(50% + ${deltaY}px)`;
+
+            joyX = Math.round(((deltaX / maxRadius) * 127) + 128);
+            joyY = Math.round(((-deltaY / maxRadius) * 127) + 128);
+
+            enviarComandoBLE();
+        }
+
+        function resetJoystick() {
+            handle.style.left = '50%';
+            handle.style.top = '50%';
+            joyX = 128;
+            joyY = 128;
+            enviarComandoBLE();
+        }
+
+        boundary.addEventListener('touchmove', handleTouch, {passive: false});
+        boundary.addEventListener('touchend', resetJoystick);
+
+        const btnManual = document.getElementById('btn-manual');
+        const btnRecord = document.getElementById('btn-record');
+        const btnSave = document.getElementById('btn-save');
+
+        btnManual.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            bitmaskBotones |= 0x01;
+            enviarComandoBLE();
+            setTimeout(() => { bitmaskBotones &= ~0x01; }, 80);
+        });
+
+        btnRecord.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            bitmaskBotones |= 0x02;
+            btnRecord.classList.add('active-state');
+            enviarComandoBLE();
+        });
+
+        btnRecord.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            bitmaskBotones &= ~0x02;
+            btnRecord.classList.remove('active-state');
+            enviarComandoBLE();
+        });
+
+        btnSave.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            bitmaskBotones |= 0x04;
+            enviarComandoBLE();
+            setTimeout(() => { bitmaskBotones &= ~0x04; }, 80);
+        });
+
+        function enviarComandoBLE() {
+            const paquete = new Uint8Array([0xAA, joyY, joyX, bitmaskBotones]);
+            console.log("TX -> ESP32:", Array.from(paquete).map(b => '0x' + b.toString(16).toUpperCase()));
+            // Aquí enlazas tu API Web Bluetooth apuntando a tu característica
+        }
+
+        function actualizarTelemetriaDesdeESP32(dataView) {
+            if(dataView.getUint8(0) !== 0xBB) return;
+
+            const modo = dataView.getUint8(1);
+            const velocidad = dataView.getUint8(2);
+            const direccion = dataView.getUint8(3);
+            const alarma = dataView.getUint8(4);
+            const bateria = dataView.getUint8(5);
+
+            const modosTexto = ["MANUAL_MODE", "CRUISE_MODE", "RECORDING", "AUTO_PILOT"];
+            document.getElementById('val-modo').innerText = modosTexto[modo] || "UNKNOWN";
+
+            document.getElementById('val-vel').innerText = velocidad;
+            document.getElementById('val-dir').innerText = direccion;
+
+            const alEl = document.getElementById('val-alarma');
+            if(alarma === 1) {
+                alEl.innerText = "CRITICAL_IDLE";
+                alEl.classList.add('sys-alert');
+            } else {
+                alEl.innerText = "SYS_ACTIVE";
+                alEl.classList.remove('sys-alert');
+            }
+
+            document.getElementById('val-bat').innerText = bateria;
+        }
+    </script>
+</body>
+</html>
